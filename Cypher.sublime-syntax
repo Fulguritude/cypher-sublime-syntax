@@ -1,0 +1,141 @@
+%YAML 1.2
+---
+# Highlights clauses, operators, functions, namespaced procedures, labels, parameters, literals and comments.
+name: Cypher
+file_extensions:
+  - cypher
+  - cyp
+scope: source.cypher
+
+variables:
+  ident: '[A-Za-z_][A-Za-z0-9_]*'
+
+contexts:
+  main:
+    - include: comments
+    - include: strings
+    - include: numbers
+    - include: parameters
+    - include: keywords
+    - include: functions
+    - include: labels
+    - include: properties
+    - include: operators
+    - include: punctuation
+
+  comments:
+    - match: '//'
+      scope: punctuation.definition.comment.cypher
+      push:
+        - meta_scope: comment.line.double-slash.cypher
+        - match: '$\n?'
+          pop: true
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.cypher
+      push:
+        - meta_scope: comment.block.cypher
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.cypher
+          pop: true
+
+  strings:
+    - match: "'"
+      scope: punctuation.definition.string.begin.cypher
+      push:
+        - meta_scope: string.quoted.single.cypher
+        - match: '\\(u[0-9A-Fa-f]{4}|.)'
+          scope: constant.character.escape.cypher
+        - match: "'"
+          scope: punctuation.definition.string.end.cypher
+          pop: true
+    - match: '"'
+      scope: punctuation.definition.string.begin.cypher
+      push:
+        - meta_scope: string.quoted.double.cypher
+        - match: '\\(u[0-9A-Fa-f]{4}|.)'
+          scope: constant.character.escape.cypher
+        - match: '"'
+          scope: punctuation.definition.string.end.cypher
+          pop: true
+    # Backtick-escaped identifiers (e.g. labels or property keys with spaces).
+    - match: '`'
+      scope: punctuation.definition.string.begin.cypher
+      push:
+        - meta_scope: constant.other.escaped-identifier.cypher
+        - match: '`'
+          scope: punctuation.definition.string.end.cypher
+          pop: true
+
+  numbers:
+    - match: '(?i)\b0x[0-9a-f]+\b'
+      scope: constant.numeric.hex.cypher
+    - match: '(?i)\b0o[0-7]+\b'
+      scope: constant.numeric.octal.cypher
+    - match: '(?i)(?:\b\d+\.\d+|\b\d+|\.\d+)(?:e[-+]?\d+)?'
+      scope: constant.numeric.cypher
+    - match: '(?i)\b(?:inf|infinity|nan)\b'
+      scope: constant.numeric.cypher
+
+  parameters:
+    # Modern $param and positional $0 parameters.
+    - match: '(\$)({{ident}}|\d+)'
+      captures:
+        1: punctuation.definition.variable.cypher
+        2: variable.parameter.cypher
+
+  keywords:
+    # Two-word predicate operators, matched as a unit so spacing stays consistent.
+    - match: '(?i)\b(?:STARTS|ENDS)\s+WITH\b'
+      scope: keyword.operator.word.cypher
+    - match: '(?i)\bIS\s+(?:NOT\s+)?NULL\b'
+      scope: keyword.operator.word.cypher
+    # Word operators / predicates. All of these are reserved words in Cypher,
+    # so matching them bare cannot collide with a user identifier.
+    - match: '(?i)\b(AND|OR|XOR|NOT|IN|IS|CONTAINS|DISTINCT|AS)\b'
+      scope: keyword.operator.word.cypher
+    # Language constants.
+    - match: '(?i)\b(true|false|null)\b'
+      scope: constant.language.cypher
+    # Clauses and control-flow keywords (all reserved).
+    - match: '(?i)\b(MATCH|OPTIONAL|RETURN|WHERE|WITH|UNWIND|CALL|YIELD|UNION|CREATE|MERGE|SET|DELETE|DETACH|REMOVE|FOREACH|ON|ORDER|BY|SKIP|LIMIT|ASC|ASCENDING|DESC|DESCENDING|USING|LOAD|CSV|FROM|HEADERS|FIELDTERMINATOR|PERIODIC|COMMIT|INDEX|CONSTRAINT|DROP|SHOW|USE|CASE|WHEN|THEN|ELSE|END)\b'
+      scope: keyword.control.cypher
+
+  functions:
+    # Namespaced procedure / function calls: apoc.foo.bar(...), gds.x.y(...), db.labels().
+    # Pattern-based so it never needs a hardcoded procedure list.
+    - match: '(?i)\b{{ident}}(?:\.{{ident}})+(?=\s*\()'
+      scope: support.function.cypher
+    # Predicate functions take a ( or {  (exists { subquery }).
+    - match: '(?i)\b(all|any|none|single|exists|isEmpty)\b(?=\s*[({])'
+      scope: support.function.cypher
+    # Built-in functions, only highlighted when actually called (followed by "(").
+    # Curated, stable core list — not the volatile APOC/GDS catalogs.
+    - match: '(?i)\b(count|collect|sum|avg|min|max|stDev|stDevP|percentileCont|percentileDisc|coalesce|head|last|length|size|timestamp|toBoolean|toBooleanOrNull|toFloat|toFloatOrNull|toInteger|toIntegerOrNull|toString|toStringOrNull|type|valueType|id|elementId|properties|randomUUID|keys|labels|nodes|relationships|range|reduce|reverse|tail|toBooleanList|toFloatList|toIntegerList|toStringList|left|right|ltrim|rtrim|trim|replace|split|substring|toLower|toUpper|normalize|abs|ceil|floor|round|sign|rand|e|exp|log|log10|sqrt|acos|asin|atan|atan2|cos|cot|degrees|haversin|pi|radians|sin|tan|date|datetime|localdatetime|localtime|time|duration|point|distance|withinBBox|shortestPath|allShortestPaths)\b(?=\s*\()'
+      scope: support.function.cypher
+    # Any other call site: user-defined function/procedure invoked by name.
+    - match: '(?i)\b{{ident}}(?=\s*\()'
+      scope: variable.function.cypher
+
+  labels:
+    # Node labels and relationship types: the :Person in (n:Person), :KNOWS in [r:KNOWS].
+    - match: '(:)\s*({{ident}})'
+      captures:
+        1: punctuation.definition.label.cypher
+        2: entity.name.type.cypher
+
+  properties:
+    # Property access: the .name in n.name.
+    - match: '(\.)({{ident}})'
+      captures:
+        1: punctuation.accessor.cypher
+        2: variable.other.member.cypher
+
+  operators:
+    - match: '(?:=~|<>|<=|>=|->|<-|\.\.|[-+*/%^=<>|])'
+      scope: keyword.operator.cypher
+
+  punctuation:
+    - match: ';'
+      scope: punctuation.terminator.cypher
+    - match: ','
+      scope: punctuation.separator.cypher
