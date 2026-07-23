@@ -30,7 +30,7 @@ Colors come entirely from standard TextMate scope names, so the package works wi
 
 ## Usage
 
-Files with a `.cypher` or `.cyp` extension are detected automatically. For any other file, choose **View > Syntax > Cypher**, or edit the `Cypher.sublime-settings` file to add any other extension you want.
+Files with a `.cypher` or `.cyp` extension are detected automatically. For any other file, choose **View > Syntax > Cypher**. To always open a given extension as Cypher, open such a file and choose **View > Syntax > Open all with current extension as… > Cypher**.
 
 ## License
 
